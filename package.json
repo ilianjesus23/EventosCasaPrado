@@ -1,0 +1,12 @@
+{
+  "name": "eventos-casa-prado",
+  "version": "1.0.0",
+  "description": "Sistema de gestión de eventos para Casa Prado",
+  "scripts": {
+    "dev": "npx live-server --port=3000 --open=index.html",
+    "start": "npx live-server --port=3000"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "PRIVATE"
+}

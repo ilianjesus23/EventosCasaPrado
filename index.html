@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestión de Eventos — Casa Prado</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="stylesheet" href="css/style.css">
+
+<!-- Supabase JS SDK (loaded but only used when credentials are set in env.js) -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- Environment config: copy env.example.js → env.js and fill in your Supabase credentials.
+     env.js is gitignored so your keys never get committed. -->
+<script src="env.js" onerror="window.ENV={}"></script>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="app-header">
+  <div class="app-logo">
+    <div class="icon-wrap"><i class="ti ti-tools-kitchen-2"></i></div>
+    <div>
+      <span>EventosPro</span>
+      <small>Casa Prado</small>
+    </div>
+  </div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-tab="events" onclick="switchTab('events')">
+      <i class="ti ti-calendar-event"></i><span>Eventos</span>
+    </button>
+    <button class="nav-tab" data-tab="calendar" onclick="switchTab('calendar')">
+      <i class="ti ti-calendar-month"></i><span>Calendario</span>
+    </button>
+    <button class="nav-tab" data-tab="config" onclick="switchTab('config')">
+      <i class="ti ti-settings"></i><span>Configuración</span>
+    </button>
+  </nav>
+</header>
+
+<!-- MAIN -->
+<main class="main">
+
+  <!-- METRICS -->
+  <div class="metrics" id="metrics"></div>
+
+  <!-- TAB: EVENTS -->
+  <div id="tab-events">
+    <div class="toolbar">
+      <div class="search-wrap">
+        <i class="ti ti-search"></i>
+        <input type="text" class="search-input" id="searchInput" placeholder="Buscar eventos..." oninput="renderEvents()">
+      </div>
+      <select class="filter-select" id="filterStatus" onchange="renderEvents()">
+        <option value="">Todos los estados</option>
+        <option value="open">Abierto</option>
+        <option value="progress">En proceso</option>
+        <option value="closed">Cerrado</option>
+      </select>
+      <select class="filter-select" id="filterRestaurant" onchange="renderEvents()">
+        <option value="">Todos los restaurantes</option>
+      </select>
+      <button class="btn btn-primary" onclick="openModal()">
+        <i class="ti ti-plus"></i> Nuevo evento
+      </button>
+    </div>
+    <div class="events-grid" id="eventsGrid"></div>
+  </div>
+
+  <!-- TAB: CALENDAR -->
+  <div id="tab-calendar" class="hidden">
+    <div class="section-header">
+      <div class="section-title">Calendario de eventos</div>
+      <button class="btn btn-ghost" onclick="goToday()"><i class="ti ti-calendar-today"></i> Hoy</button>
+    </div>
+    <div class="calendar-wrap">
+      <div class="calendar-header">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)"><i class="ti ti-chevron-left"></i></button>
+        <div class="calendar-title" id="calTitle"></div>
+        <button class="cal-nav-btn" onclick="changeMonth(1)"><i class="ti ti-chevron-right"></i></button>
+      </div>
+      <div class="calendar-grid" id="calGrid"></div>
+    </div>
+  </div>
+
+  <!-- TAB: CONFIG -->
+  <div id="tab-config" class="hidden">
+    <div class="config-section">
+      <div class="config-title">Restaurantes del grupo</div>
+      <div class="config-desc">Administra los restaurantes disponibles para asignar eventos.</div>
+      <div class="restaurant-list" id="restaurantList"></div>
+      <div class="add-restaurant-form">
+        <input type="text" class="text-input" id="newRestaurantInput" placeholder="Nombre del restaurante..." onkeydown="if(event.key==='Enter') addRestaurant()">
+        <button class="btn btn-primary" onclick="addRestaurant()"><i class="ti ti-plus"></i> Agregar</button>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL CREAR/EDITAR EVENTO -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <i class="ti ti-calendar-plus" style="font-size:22px;color:var(--primary)"></i>
+      <h2 id="modalTitle">Nuevo evento</h2>
+      <button class="modal-close" onclick="closeModal()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label>Nombre del evento *</label>
+          <input type="text" id="f-name" placeholder="Ej. Cena de gala corporativa">
+        </div>
+        <div class="form-group">
+          <label>Restaurante *</label>
+          <select id="f-restaurant"><option value="">Seleccionar...</option></select>
+        </div>
+        <div class="form-group">
+          <label>Fecha del evento *</label>
+          <input type="date" id="f-date">
+        </div>
+        <div class="form-group">
+          <label>Tipo de evento</label>
+          <select id="f-type">
+            <option value="Corporativo">Corporativo</option>
+            <option value="Boda">Boda</option>
+            <option value="Cumpleaños">Cumpleaños</option>
+            <option value="Graduación">Graduación</option>
+            <option value="Cóctel">Cóctel</option>
+            <option value="Degustación">Degustación</option>
+            <option value="Otro">Otro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Responsable</label>
+          <input type="text" id="f-manager" placeholder="Nombre del responsable">
+        </div>
+        <div class="form-group">
+          <label>Número de personas</label>
+          <input type="number" id="f-guests" placeholder="0" min="1">
+        </div>
+        <div class="form-group full">
+          <label>Alimentos</label>
+          <textarea id="f-food" placeholder="Descripción del menú de alimentos..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Bebidas</label>
+          <textarea id="f-drinks" placeholder="Descripción de bebidas y paquete de bar..."></textarea>
+        </div>
+        <div class="form-group full">
+          <label>Notas adicionales</label>
+          <textarea id="f-notes" placeholder="Requerimientos especiales, observaciones..."></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEvent()"><i class="ti ti-device-floppy"></i> Guardar evento</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-header">
+      <i class="ti ti-alert-triangle" style="font-size:22px;color:var(--danger)"></i>
+      <h2>Confirmar eliminación</h2>
+      <button class="modal-close" onclick="closeConfirm()"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:14px;color:var(--gray-600)">¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
+      <button class="btn btn-danger" onclick="confirmDelete()"><i class="ti ti-trash"></i> Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="fileInput" accept=".pdf,.xlsx,.xls,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp" style="display:none" onchange="handleFileAttach(event)">
+
+<script src="js/supabase-client.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
