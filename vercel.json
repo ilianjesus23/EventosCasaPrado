@@ -1,5 +1,11 @@
 {
   "buildCommand": "node build.js",
   "outputDirectory": ".",
-  "framework": null
+  "framework": null,
+  "crons": [
+    {
+      "path": "/api/reminders",
+      "schedule": "0 9 * * *"
+    }
+  ]
 }

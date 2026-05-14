@@ -79,6 +79,21 @@ function lockCount(ev) {
 }
 
 // ============================================================
+// EMAIL NOTIFICATIONS
+// ============================================================
+async function sendEmailNotification(trigger, ev, extra = {}) {
+  try {
+    await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ trigger, event: ev, ...extra }),
+    });
+  } catch (e) {
+    console.warn('Email notification failed:', e);
+  }
+}
+
+// ============================================================
 // TOAST
 // ============================================================
 let toastTimer = null;
@@ -360,6 +375,11 @@ async function completeLock(eventId, lockKey) {
     await saveEvents();
   }
 
+  sendEmailNotification('lock_completed', ev, { lockKey });
+
+  const allDone = LOCKS.every(l => ev.locks?.[l.key]?.done);
+  if (allDone) sendEmailNotification('closed', ev);
+
   renderAll();
   showToast('Candado completado', 'success');
 }
@@ -377,6 +397,7 @@ function openModal(id) {
   document.getElementById('f-date').value = ev?.date || today();
   document.getElementById('f-type').value = ev?.type || 'Corporativo';
   document.getElementById('f-manager').value = ev?.manager || '';
+  document.getElementById('f-manager-email').value = ev?.manager_email || '';
   document.getElementById('f-guests').value = ev?.guests || '';
   document.getElementById('f-food').value = ev?.food || '';
   document.getElementById('f-drinks').value = ev?.drinks || '';
@@ -401,6 +422,7 @@ async function saveEvent() {
     name, restaurant, date,
     type: document.getElementById('f-type').value,
     manager: document.getElementById('f-manager').value.trim(),
+    manager_email: document.getElementById('f-manager-email').value.trim(),
     guests: document.getElementById('f-guests').value,
     food: document.getElementById('f-food').value.trim(),
     drinks: document.getElementById('f-drinks').value.trim(),
@@ -423,6 +445,7 @@ async function saveEvent() {
       const created = await dbCreateEvent(newEv);
       if (created) {
         state.events.push(created);
+        sendEmailNotification('created', created);
       } else {
         showToast('Error al guardar el evento.', 'error');
         return;
@@ -431,6 +454,7 @@ async function saveEvent() {
       newEv.id = uid();
       state.events.push(newEv);
       await saveEvents();
+      sendEmailNotification('created', newEv);
     }
   }
 
