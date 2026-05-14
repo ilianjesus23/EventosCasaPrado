@@ -4,7 +4,8 @@
   "description": "Sistema de gestión de eventos para Casa Prado",
   "scripts": {
     "dev": "npx live-server --port=3000 --open=index.html",
-    "start": "npx live-server --port=3000"
+    "start": "npx live-server --port=3000",
+    "build": "node build.js"
   },
   "keywords": [],
   "author": "",
